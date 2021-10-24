@@ -63,6 +63,9 @@ body {
   background-color: #f1f1f1;
 }
 
+.selected-target:hover {
+  background-color: #0079BF;
+}
 
 .roulette-list-item:hover::before {
   margin-right: 10px;
