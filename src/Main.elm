@@ -35,9 +35,9 @@ type alias Model =
     }
 
 
-init : { currentTime : Int, listValue : String } -> ( Model, Cmd Msg )
+init : { currentTime : Int, listValue : JD.Value } -> ( Model, Cmd Msg )
 init { currentTime, listValue } =
-    ( { list = Result.withDefault [] <| JD.decodeString (JD.list JD.string) listValue
+    ( { list = Result.withDefault [] <| JD.decodeValue (JD.list JD.string) listValue
       , isPushedLever = False
       , isInputted = False
       , targetCount = 0
@@ -392,7 +392,7 @@ view model =
         ]
 
 
-main : Program { currentTime : Int, listValue : String } Model Msg
+main : Program { currentTime : Int, listValue : JE.Value } Model Msg
 main =
     Browser.element
         { init = init
