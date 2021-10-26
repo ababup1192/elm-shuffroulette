@@ -67,7 +67,7 @@ body {
   background-color: #0079BF;
 }
 
-.roulette-list-item:hover::before {
+.roulette-list-item__removeable:hover::before {
   margin-right: 10px;
   font-family: "Font Awesome 5 Free"; 
   font-weight: 900;
@@ -94,6 +94,10 @@ body {
   padding: 15px;
 }
 
+.roulette-list-new-item-button-wrapper {
+  display: flex;
+}
+
 .roulette-list-new-item-button {
   background-color: #0079bf;
   color: #fff;
@@ -101,6 +105,13 @@ body {
   padding: 10px 15px;
   margin-left: 15px;
   margin-bottom: 15px;
+}
+
+.roulette-list-new-item-button-close {
+  margin: auto auto 20px auto;
+  font-size: 20px;
+  color: #42526e;
+  cursor: pointer;
 }
 
 .roulette-list-new-item-button:hover {

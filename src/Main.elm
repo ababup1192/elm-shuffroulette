@@ -1,13 +1,25 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import Array
 import Browser
+import Browser.Dom as Dom
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Json.Decode as JD
+import Json.Encode as JE
 import Process
 import Random
+import Result
 import Task
+
+
+port saveList : JE.Value -> Cmd msg
+
+
+encodeJsonList : List String -> JE.Value
+encodeJsonList list =
+    JE.list JE.string list
 
 
 type alias Model =
@@ -19,12 +31,13 @@ type alias Model =
     , currentCount : Int
     , resultList : List String
     , resultText : String
+    , inputItemName : String
     }
 
 
-init : { currentTime : Int } -> ( Model, Cmd Msg )
-init { currentTime } =
-    ( { list = [ "さわ", "ぞーま", "キム", "松尾", "高山", "かの" ]
+init : { currentTime : Int, listValue : String } -> ( Model, Cmd Msg )
+init { currentTime, listValue } =
+    ( { list = Result.withDefault [] <| JD.decodeString (JD.list JD.string) listValue
       , isPushedLever = False
       , isInputted = False
       , targetCount = 0
@@ -32,14 +45,20 @@ init { currentTime } =
       , resultList = []
       , resultText = "[ ]"
       , seed = Random.initialSeed currentTime
+      , inputItemName = ""
       }
     , Cmd.none
     )
 
 
 type Msg
-    = PushLever
+    = NoOp
+    | PushLever
     | NewItem
+    | InputItemName String
+    | CloseNewItem
+    | AddItem
+    | RemoveItem String
     | StartAnimation Int
     | PlusTargetCount ()
 
@@ -56,6 +75,9 @@ update msg model =
                     lastList
     in
     case msg of
+        NoOp ->
+            ( model, Cmd.none )
+
         PushLever ->
             let
                 { lastList } =
@@ -76,8 +98,33 @@ update msg model =
                 in
                 update (StartAnimation randomNum) { model | isPushedLever = True, seed = nextSeed }
 
+        InputItemName name ->
+            ( { model | inputItemName = name }, Cmd.none )
+
         NewItem ->
-            ( { model | isInputted = True }, Cmd.none )
+            ( { model | isInputted = True }, Task.attempt (\_ -> NoOp) (Dom.focus "new-item-input") )
+
+        AddItem ->
+            let
+                newList =
+                    model.list ++ [ model.inputItemName ]
+            in
+            ( { model | list = newList, inputItemName = "" }
+            , Cmd.batch
+                [ saveList <| encodeJsonList newList
+                , Task.attempt (\_ -> NoOp) (Dom.focus "new-item-input")
+                ]
+            )
+
+        RemoveItem name ->
+            let
+                newList =
+                    List.filter ((/=) name) model.list
+            in
+            ( { model | list = newList }, saveList <| encodeJsonList newList )
+
+        CloseNewItem ->
+            ( { model | isInputted = False }, Cmd.none )
 
         StartAnimation randomNum ->
             let
@@ -213,17 +260,21 @@ view model =
             createListList model.list model.resultList
 
         targetIndex =
-            modBy
-                (List.length
-                    (case lastList of
-                        [] ->
-                            model.list
+            if List.isEmpty model.list then
+                0
 
-                        _ ->
-                            lastList
+            else
+                modBy
+                    (List.length
+                        (case lastList of
+                            [] ->
+                                model.list
+
+                            _ ->
+                                lastList
+                        )
                     )
-                )
-                model.currentCount
+                    model.currentCount
     in
     div [ class "main-container" ]
         [ div [ class "roulette-results" ] <|
@@ -250,26 +301,38 @@ view model =
                                         (\index name ->
                                             li
                                                 [ class <|
-                                                    "roulette-list-item "
+                                                    "roulette-list-item roulette-list-item__removeable "
                                                         ++ (if index == targetIndex then
                                                                 "selected-target"
 
                                                             else
                                                                 ""
                                                            )
+                                                , onClick <| RemoveItem name
                                                 ]
                                                 [ text name ]
                                         )
                                         model.list
                                 , div [ class "roulette-list-new-item", onClick NewItem ]
                                     [ if model.isInputted then
-                                        input [ type_ "text", placeholder "名前を入力", class "roulette-list-new-item-input" ] []
+                                        input
+                                            [ id "new-item-input"
+                                            , type_ "text"
+                                            , placeholder "名前を入力"
+                                            , class "roulette-list-new-item-input"
+                                            , value model.inputItemName
+                                            , onInput InputItemName
+                                            ]
+                                            []
 
                                       else
                                         span [] [ text "+ アイテムを追加" ]
                                     ]
                                 , if model.isInputted then
-                                    button [ class "roulette-list-new-item-button" ] [ text "アイテムを追加" ]
+                                    div [ class "roulette-list-new-item-button-wrapper" ]
+                                        [ button [ class "roulette-list-new-item-button", onClick AddItem ] [ text "アイテムを追加" ]
+                                        , i [ onClick CloseNewItem, class "fas fa-times roulette-list-new-item-button-close" ] []
+                                        ]
 
                                   else
                                     text ""
@@ -329,7 +392,7 @@ view model =
         ]
 
 
-main : Program { currentTime : Int } Model Msg
+main : Program { currentTime : Int, listValue : String } Model Msg
 main =
     Browser.element
         { init = init
