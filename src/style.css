@@ -26,6 +26,11 @@ body {
   display: flex;
 }
 
+.roulette-undo {
+  font-size: 25px;
+  cursor: pointer;
+}
+
 .roulette {
   margin-left: 10px;
   background-color: #ebecf0;
@@ -41,7 +46,14 @@ body {
 }
 
 .roulette-header-title {
+  display: flex;
   font-weight: bold;
+  justify-content: space-between;
+}
+
+.roulette-list-bomb-button {
+  font-size: 18px;
+  cursor: pointer;
 }
 
 .roulette-list-item {

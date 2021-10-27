@@ -61,6 +61,8 @@ type Msg
     | RemoveItem String
     | StartAnimation Int
     | PlusTargetCount ()
+    | UndoRoulette
+    | BombList
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -222,6 +224,19 @@ update msg model =
             , Cmd.none
             )
 
+        UndoRoulette ->
+            ( { model
+                | targetCount = 0
+                , currentCount = 0
+                , resultList = []
+                , resultText = "[ ]"
+              }
+            , Cmd.none
+            )
+
+        BombList ->
+            ( { model | list = [] }, saveList <| encodeJsonList [] )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -289,12 +304,16 @@ view model =
                 , class "roulette-lever"
                 ]
                 []
+            , i [ class "fas fa-undo roulette-undo", onClick UndoRoulette ] []
             ]
                 ++ (case model.resultList of
                         [] ->
                             [ div [ class "roulette" ]
                                 [ header [ class "roulette-header" ]
-                                    [ h1 [ class "roulette-header-title" ] [ text "1" ]
+                                    [ h1 [ class "roulette-header-title" ]
+                                        [ text "1"
+                                        , i [ class "fas fa-bomb roulette-list-bomb-button", onClick BombList ] []
+                                        ]
                                     ]
                                 , ul [ class "roulette-list" ] <|
                                     List.indexedMap
