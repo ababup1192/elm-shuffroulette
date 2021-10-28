@@ -290,10 +290,8 @@ view model =
                         )
                     )
                     model.currentCount
-    in
-    -- レバーとか回すところ
-    div [ class "main-container" ]
-        [ div [ class "roulette-results" ] <|
+
+        controlView =
             [ img
                 [ onClick PushLever
                 , src <|
@@ -307,111 +305,126 @@ view model =
                 []
             , i [ class "fas fa-undo roulette-undo", onClick UndoRoulette ] []
             ]
-                ++ (case model.resultList of
-                        [] ->
-                            -- リスト作るところ
-                            [ div [ class "roulette" ]
-                                [ header [ class "roulette-header" ]
-                                    [ h1 [ class "roulette-header-title" ]
-                                        [ text "1"
-                                        , i [ class "fas fa-bomb roulette-list-bomb-button", onClick BombList ] []
-                                        ]
-                                    ]
-                                , ul [ class "roulette-list" ] <|
-                                    List.indexedMap
-                                        (\index name ->
-                                            li
-                                                [ class <|
-                                                    "roulette-list-item roulette-list-item__removeable "
-                                                        ++ (if index == targetIndex then
-                                                                "selected-target"
 
-                                                            else
-                                                                ""
-                                                           )
-                                                , onClick <| RemoveItem name
-                                                ]
-                                                [ text name ]
-                                        )
-                                        model.list
+        -- リストを作るところ
+        listViewForCreate =
+            [ div [ class "roulette" ]
+                [ header [ class "roulette-header" ]
+                    [ h1 [ class "roulette-header-title" ]
+                        [ text "1"
+                        , i [ class "fas fa-bomb roulette-list-bomb-button", onClick BombList ] []
+                        ]
+                    ]
+                , ul [ class "roulette-list" ] <|
+                    List.indexedMap
+                        (\index name ->
+                            li
+                                [ class <|
+                                    "roulette-list-item roulette-list-item__removeable "
+                                        ++ (if index == targetIndex then
+                                                "selected-target"
 
-                                -- アイテム追加するところ
-                                , div [ class "roulette-list-new-item", onClick NewItem ]
-                                    [ if model.isInputted then
-                                        input
-                                            [ id "new-item-input"
-                                            , type_ "text"
-                                            , placeholder "名前を入力"
-                                            , class "roulette-list-new-item-input"
-                                            , value model.inputItemName
-                                            , onInput InputItemName
-                                            ]
-                                            []
-
-                                      else
-                                        span [] [ text "+ アイテムを追加" ]
-                                    ]
-                                , if model.isInputted then
-                                    div [ class "roulette-list-new-item-button-wrapper" ]
-                                        [ button [ class "roulette-list-new-item-button", onClick AddItem ] [ text "アイテムを追加" ]
-                                        , i [ onClick CloseNewItem, class "fas fa-times roulette-list-new-item-button-close" ] []
-                                        ]
-
-                                  else
-                                    text ""
+                                            else
+                                                ""
+                                           )
+                                , onClick <| RemoveItem name
                                 ]
+                                [ text name ]
+                        )
+                        model.list
+
+                -- アイテム追加するところ
+                , div [ class "roulette-list-new-item", onClick NewItem ]
+                    [ if model.isInputted then
+                        input
+                            [ id "new-item-input"
+                            , type_ "text"
+                            , placeholder "名前を入力"
+                            , class "roulette-list-new-item-input"
+                            , value model.inputItemName
+                            , onInput InputItemName
                             ]
+                            []
 
-                        _ ->
-                            -- ルーレットを回した後の列
-                            List.indexedMap
-                                (\index ( n, list ) ->
-                                    div [ class "roulette" ]
-                                        [ header [ class "roulette-header" ]
-                                            [ h1 [ class "roulette-header-title" ] [ text <| String.fromInt (index + 1) ]
-                                            ]
-                                        , ul [ class "roulette-list" ] <|
-                                            List.map
-                                                (\name ->
-                                                    li
-                                                        [ class <|
-                                                            "roulette-list-item "
-                                                                ++ (if name == n then
-                                                                        "selected-target"
+                      else
+                        span [] [ text "+ アイテムを追加" ]
+                    ]
+                , if model.isInputted then
+                    div [ class "roulette-list-new-item-button-wrapper" ]
+                        [ button [ class "roulette-list-new-item-button", onClick AddItem ] [ text "アイテムを追加" ]
+                        , i [ onClick CloseNewItem, class "fas fa-times roulette-list-new-item-button-close" ] []
+                        ]
 
-                                                                    else
-                                                                        ""
-                                                                   )
-                                                        ]
-                                                        [ text name ]
-                                                )
-                                                list
+                  else
+                    text ""
+                ]
+            ]
+
+        -- 回し終わった後のリスト
+        shuffledList =
+            List.indexedMap
+                (\index ( n, list ) ->
+                    div [ class "roulette" ]
+                        [ header [ class "roulette-header" ]
+                            [ h1 [ class "roulette-header-title" ] [ text <| String.fromInt (index + 1) ]
+                            ]
+                        , ul [ class "roulette-list" ] <|
+                            List.map
+                                (\name ->
+                                    li
+                                        [ class <|
+                                            "roulette-list-item "
+                                                ++ (if name == n then
+                                                        "selected-target"
+
+                                                    else
+                                                        ""
+                                                   )
                                         ]
+                                        [ text name ]
                                 )
-                                listList
-                                -- ルーレットを回す対象の列
-                                ++ [ div [ class "roulette" ]
-                                        [ header [ class "roulette-header" ]
-                                            [ h1 [ class "roulette-header-title" ] [ text <| String.fromInt <| List.length listList + 1 ]
-                                            ]
-                                        , ul [ class "roulette-list" ] <|
-                                            List.indexedMap
-                                                (\index name ->
-                                                    li
-                                                        [ class <|
-                                                            "roulette-list-item "
-                                                                ++ (if index == targetIndex then
-                                                                        "selected-target"
+                                list
+                        ]
+                )
+                listList
 
-                                                                    else
-                                                                        ""
-                                                                   )
-                                                        ]
-                                                        [ text name ]
-                                                )
-                                                lastList
-                                        ]
-                                   ]
+        -- ルーレットを回す対象のリスト
+        shuffleList =
+            [ div [ class "roulette" ]
+                [ header [ class "roulette-header" ]
+                    [ h1 [ class "roulette-header-title" ] [ text <| String.fromInt <| List.length listList + 1 ]
+                    ]
+                , ul [ class "roulette-list" ] <|
+                    List.indexedMap
+                        (\index name ->
+                            li
+                                [ class <|
+                                    "roulette-list-item "
+                                        ++ (if index == targetIndex then
+                                                "selected-target"
+
+                                            else
+                                                ""
+                                           )
+                                ]
+                                [ text name ]
+                        )
+                        lastList
+                ]
+            ]
+
+        isStartedRoulette =
+            List.isEmpty model.resultList
+    in
+    -- レバーとか回すところ
+    div [ class "main-container" ]
+        [ div [ class "roulette-results" ] <|
+            controlView
+                ++ (if isStartedRoulette then
+                        listViewForCreate
+
+                    else
+                        shuffledList ++ shuffleList
                    )
         , h2 [ class "roulette-result-text" ] [ text model.resultText ]
         ]
