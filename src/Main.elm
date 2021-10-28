@@ -291,6 +291,7 @@ view model =
                     )
                     model.currentCount
     in
+    -- レバーとか回すところ
     div [ class "main-container" ]
         [ div [ class "roulette-results" ] <|
             [ img
@@ -308,6 +309,7 @@ view model =
             ]
                 ++ (case model.resultList of
                         [] ->
+                            -- リスト作るところ
                             [ div [ class "roulette" ]
                                 [ header [ class "roulette-header" ]
                                     [ h1 [ class "roulette-header-title" ]
@@ -332,6 +334,8 @@ view model =
                                                 [ text name ]
                                         )
                                         model.list
+
+                                -- アイテム追加するところ
                                 , div [ class "roulette-list-new-item", onClick NewItem ]
                                     [ if model.isInputted then
                                         input
@@ -359,6 +363,7 @@ view model =
                             ]
 
                         _ ->
+                            -- ルーレットを回した後の列
                             List.indexedMap
                                 (\index ( n, list ) ->
                                     div [ class "roulette" ]
@@ -384,6 +389,7 @@ view model =
                                         ]
                                 )
                                 listList
+                                -- ルーレットを回す対象の列
                                 ++ [ div [ class "roulette" ]
                                         [ header [ class "roulette-header" ]
                                             [ h1 [ class "roulette-header-title" ] [ text <| String.fromInt <| List.length listList + 1 ]
