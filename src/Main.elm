@@ -420,6 +420,9 @@ type alias SelectedListArgs =
 createSelectedText : SelectedListArgs -> String
 createSelectedText { selectedList, restList } =
     case ( selectedList, restList ) of
+        ( [], [] ) ->
+            "[ ]"
+
         ( [], [ a ] ) ->
             "[ ]"
 

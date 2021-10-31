@@ -27,4 +27,10 @@ createSelectedTextTest =
                     createSelectedText { selectedList = [], restList = [ "john" ] }
                         |> Expect.equal "[ ]"
             ]
+        , describe "選ばれたものも、残りも空のとき"
+            [ test "ルーレットは回せないので、 [ ] 空となる" <|
+                \_ ->
+                    createSelectedText { selectedList = [], restList = [] }
+                        |> Expect.equal "[ ]"
+            ]
         ]
