@@ -57,7 +57,7 @@ type Msg
     | CloseNewItem
     | AddItem
     | RemoveItem String
-    | PlusTargetCount ()
+    | DoRouletteAnimation ()
     | UndoRoulette
     | BombList
 
@@ -92,7 +92,7 @@ update msg model =
                     List.map
                         (\x ->
                             Process.sleep (toFloat x * 100)
-                                |> Task.perform PlusTargetCount
+                                |> Task.perform DoRouletteAnimation
                         )
                         (List.range 0 newModel.targetCount)
             )
@@ -125,7 +125,7 @@ update msg model =
         CloseNewItem ->
             ( { model | isInputted = False }, Cmd.none )
 
-        PlusTargetCount () ->
+        DoRouletteAnimation () ->
             let
                 { lastList } =
                     createListList model.list model.resultList
