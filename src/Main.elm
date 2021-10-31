@@ -82,19 +82,21 @@ update msg model =
             let
                 newModel =
                     pushLever model
-            in
-            ( newModel
-            , if newModel == model then
-                Cmd.none
 
-              else
-                Cmd.batch <|
+                animationList =
                     List.map
                         (\x ->
                             Process.sleep (toFloat x * 100)
                                 |> Task.perform DoRouletteAnimation
                         )
                         (List.range 0 newModel.targetCount)
+            in
+            ( newModel
+            , if newModel == model then
+                Cmd.none
+
+              else
+                Cmd.batch animationList
             )
 
         InputItemName name ->
