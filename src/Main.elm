@@ -3,6 +3,7 @@ port module Main exposing (..)
 import Array
 import Browser
 import Browser.Dom as Dom
+import Fuzz exposing (result)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -196,7 +197,7 @@ pushLever model =
         targetCount =
             List.length (getTargetList model.list lastList) * 5
     in
-    if model.isPushedLever || List.length lastList == 1 then
+    if model.isPushedLever || List.length model.list <= 1 || List.length lastList == 1 then
         model
 
     else
@@ -401,25 +402,40 @@ view model =
                         shuffledList ++ shuffleList
                    )
         , h2 [ class "roulette-result-text" ]
-            [ text <| createResultText model.resultList lastList
+            [ text <|
+                createSelectedText
+                    { selectedList = model.resultList
+                    , restList = lastList
+                    }
             ]
         ]
 
 
-createResultText : List String -> List String -> String
-createResultText resultList lastList =
-    "[ "
-        ++ String.join ", "
-            (resultList
-                ++ (case lastList of
-                        [ last ] ->
-                            [ last ]
+type alias SelectedListArgs =
+    { selectedList : List String
+    , restList : List String
+    }
 
-                        _ ->
-                            []
-                   )
-            )
-        ++ " ]"
+
+createSelectedText : SelectedListArgs -> String
+createSelectedText { selectedList, restList } =
+    case ( selectedList, restList ) of
+        ( [], [ a ] ) ->
+            "[ ]"
+
+        _ ->
+            "[ "
+                ++ String.join ", "
+                    (selectedList
+                        ++ (case restList of
+                                [ last ] ->
+                                    [ last ]
+
+                                _ ->
+                                    []
+                           )
+                    )
+                ++ " ]"
 
 
 main : Program { currentTime : Int, listValue : JE.Value } Model Msg
