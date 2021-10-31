@@ -30,7 +30,6 @@ type alias Model =
     , targetCount : Int
     , currentCount : Int
     , resultList : List String
-    , resultText : String
     , inputItemName : String
     }
 
@@ -43,7 +42,6 @@ init { currentTime, listValue } =
       , targetCount = 0
       , currentCount = 0
       , resultList = []
-      , resultText = "[ ]"
       , seed = Random.initialSeed currentTime
       , inputItemName = ""
       }
@@ -86,13 +84,17 @@ update msg model =
                     pushLever model
             in
             ( newModel
-            , Cmd.batch <|
-                List.map
-                    (\x ->
-                        Process.sleep (toFloat x * 100)
-                            |> Task.perform PlusTargetCount
-                    )
-                    (List.range 0 newModel.targetCount)
+            , if newModel == model then
+                Cmd.none
+
+              else
+                Cmd.batch <|
+                    List.map
+                        (\x ->
+                            Process.sleep (toFloat x * 100)
+                                |> Task.perform PlusTargetCount
+                        )
+                        (List.range 0 newModel.targetCount)
             )
 
         InputItemName name ->
@@ -166,36 +168,6 @@ update msg model =
                 , isPushedLever = not isStop
                 , resultList =
                     newResultList
-                , resultText =
-                    let
-                        lastNameList =
-                            List.filter
-                                (\n ->
-                                    n
-                                        /= (Maybe.withDefault "" <|
-                                                Array.get targetIndex <|
-                                                    Array.fromList (getTargetList model.list lastList)
-                                           )
-                                )
-                                lastList
-                    in
-                    if isStop then
-                        "[ "
-                            ++ String.join ", "
-                                (List.map (\name -> "\"" ++ name ++ "\"")
-                                    (newResultList
-                                        ++ (if List.length lastNameList == 1 then
-                                                lastNameList
-
-                                            else
-                                                []
-                                           )
-                                    )
-                                )
-                            ++ " ]"
-
-                    else
-                        model.resultText
               }
             , Cmd.none
             )
@@ -205,7 +177,6 @@ update msg model =
                 | targetCount = 0
                 , currentCount = 0
                 , resultList = []
-                , resultText = "[ ]"
               }
             , Cmd.none
             )
@@ -427,8 +398,26 @@ view model =
                     else
                         shuffledList ++ shuffleList
                    )
-        , h2 [ class "roulette-result-text" ] [ text model.resultText ]
+        , h2 [ class "roulette-result-text" ]
+            [ text <| createResultText model.resultList lastList
+            ]
         ]
+
+
+createResultText : List String -> List String -> String
+createResultText resultList lastList =
+    "[ "
+        ++ String.join ", "
+            (resultList
+                ++ (case lastList of
+                        [ last ] ->
+                            [ last ]
+
+                        _ ->
+                            []
+                   )
+            )
+        ++ " ]"
 
 
 main : Program { currentTime : Int, listValue : JE.Value } Model Msg
