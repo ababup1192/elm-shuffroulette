@@ -59,46 +59,41 @@ type Msg
     | CloseNewItem
     | AddItem
     | RemoveItem String
-    | StartAnimation Int
     | PlusTargetCount ()
     | UndoRoulette
     | BombList
 
 
+getTargetList : List String -> List String -> List String
+getTargetList list lastList =
+    case lastList of
+        [] ->
+            list
+
+        _ ->
+            lastList
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    let
-        getTargetList lastList =
-            case lastList of
-                [] ->
-                    model.list
-
-                _ ->
-                    lastList
-    in
     case msg of
         NoOp ->
             ( model, Cmd.none )
 
         PushLever ->
             let
-                { lastList } =
-                    createListList model.list model.resultList
+                newModel =
+                    pushLever model
             in
-            if model.isPushedLever || List.length lastList == 1 then
-                ( model, Cmd.none )
-
-            else
-                let
-                    ( randomNum, nextSeed ) =
-                        Random.step
-                            (Random.int 0 <|
-                                List.length (getTargetList lastList)
-                            )
-                        <|
-                            model.seed
-                in
-                update (StartAnimation randomNum) { model | isPushedLever = True, seed = nextSeed }
+            ( newModel
+            , Cmd.batch <|
+                List.map
+                    (\x ->
+                        Process.sleep (toFloat x * 100)
+                            |> Task.perform PlusTargetCount
+                    )
+                    (List.range 0 newModel.targetCount)
+            )
 
         InputItemName name ->
             ( { model | inputItemName = name }, Cmd.none )
@@ -128,25 +123,6 @@ update msg model =
         CloseNewItem ->
             ( { model | isInputted = False }, Cmd.none )
 
-        StartAnimation randomNum ->
-            let
-                { lastList } =
-                    createListList model.list model.resultList
-
-                targetCount =
-                    (List.length (getTargetList lastList) * 5)
-                        + randomNum
-            in
-            ( { model | targetCount = targetCount, currentCount = 0 }
-            , Cmd.batch <|
-                List.map
-                    (\x ->
-                        Process.sleep (toFloat x * 100)
-                            |> Task.perform PlusTargetCount
-                    )
-                    (List.range 0 targetCount)
-            )
-
         PlusTargetCount () ->
             let
                 { lastList } =
@@ -168,7 +144,7 @@ update msg model =
                 appendNameList =
                     maybeToList <|
                         Array.get targetIndex <|
-                            Array.fromList (getTargetList lastList)
+                            Array.fromList (getTargetList model.list lastList)
 
                 newResultList =
                     if model.currentCount == model.targetCount then
@@ -198,7 +174,7 @@ update msg model =
                                     n
                                         /= (Maybe.withDefault "" <|
                                                 Array.get targetIndex <|
-                                                    Array.fromList (getTargetList lastList)
+                                                    Array.fromList (getTargetList model.list lastList)
                                            )
                                 )
                                 lastList
@@ -236,6 +212,31 @@ update msg model =
 
         BombList ->
             ( { model | list = [] }, saveList <| encodeJsonList [] )
+
+
+pushLever : Model -> Model
+pushLever model =
+    let
+        { lastList } =
+            createListList model.list model.resultList
+
+        targetCount =
+            List.length (getTargetList model.list lastList) * 5
+    in
+    if model.isPushedLever || List.length lastList == 1 then
+        model
+
+    else
+        let
+            ( randomNum, nextSeed ) =
+                Random.step
+                    (Random.int 0 <|
+                        List.length (getTargetList model.list lastList)
+                    )
+                <|
+                    model.seed
+        in
+        { model | isPushedLever = True, seed = nextSeed, targetCount = targetCount + randomNum, currentCount = 0 }
 
 
 subscriptions : Model -> Sub Msg
