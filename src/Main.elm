@@ -1,21 +1,18 @@
-port module Main exposing (..)
+module Main exposing (..)
 
 import Array
 import Browser
 import Browser.Dom as Dom
+import Browser.Navigation as Nav
 import Fuzz exposing (result)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Json.Decode as JD
 import Json.Encode as JE
 import Process
 import Random
-import Result
 import Task
-
-
-port saveList : JE.Value -> Cmd msg
+import Url
 
 
 encodeJsonList : List String -> JE.Value
@@ -32,12 +29,31 @@ type alias Model =
     , currentCount : Int
     , resultList : List String
     , inputItemName : String
+    , key : Nav.Key
+    , url : Url.Url
     }
 
 
-init : { currentTime : Int, listValue : JD.Value } -> ( Model, Cmd Msg )
-init { currentTime, listValue } =
-    ( { list = Result.withDefault [] <| JD.decodeValue (JD.list JD.string) listValue
+init : { currentTime : Int } -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init { currentTime } url key =
+    let
+        initalListMaybe : Maybe (List String)
+        initalListMaybe =
+            Maybe.andThen
+                (Url.percentDecode >> Maybe.map (String.split ","))
+                url.fragment
+    in
+    ( { list =
+            case initalListMaybe of
+                Just initialList ->
+                    if url.fragment /= Just "" then
+                        initialList
+
+                    else
+                        []
+
+                Nothing ->
+                    []
       , isPushedLever = False
       , isInputted = False
       , targetCount = 0
@@ -45,6 +61,8 @@ init { currentTime, listValue } =
       , resultList = []
       , seed = Random.initialSeed currentTime
       , inputItemName = ""
+      , key = key
+      , url = url
       }
     , Cmd.none
     )
@@ -61,6 +79,8 @@ type Msg
     | DoRouletteAnimation ()
     | UndoRoulette
     | BombList
+    | LinkClicked Browser.UrlRequest
+    | UrlChanged Url.Url
 
 
 getTargetList : List String -> List String -> List String
@@ -75,6 +95,10 @@ getTargetList list lastList =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        saveItemListToHash newList =
+            Nav.load <| "/#" ++ String.join "," newList
+    in
     case msg of
         NoOp ->
             ( model, Cmd.none )
@@ -113,8 +137,8 @@ update msg model =
             in
             ( { model | list = newList, inputItemName = "" }
             , Cmd.batch
-                [ saveList <| encodeJsonList newList
-                , Task.attempt (\_ -> NoOp) (Dom.focus "new-item-input")
+                [ Task.attempt (\_ -> NoOp) (Dom.focus "new-item-input")
+                , saveItemListToHash newList
                 ]
             )
 
@@ -123,7 +147,11 @@ update msg model =
                 newList =
                     List.filter ((/=) name) model.list
             in
-            ( { model | list = newList }, saveList <| encodeJsonList newList )
+            ( { model | list = newList }
+            , Cmd.batch
+                [ saveItemListToHash newList
+                ]
+            )
 
         CloseNewItem ->
             ( { model | isInputted = False }, Cmd.none )
@@ -185,7 +213,24 @@ update msg model =
             )
 
         BombList ->
-            ( { model | list = [] }, saveList <| encodeJsonList [] )
+            ( { model | list = [] }
+            , Cmd.batch
+                [ saveItemListToHash []
+                ]
+            )
+
+        LinkClicked urlRequest ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( model, Nav.pushUrl model.key (Url.toString url) )
+
+                Browser.External href ->
+                    ( model, Nav.load href )
+
+        UrlChanged url ->
+            ( { model | url = url }
+            , Cmd.none
+            )
 
 
 pushLever : Model -> Model
@@ -243,7 +288,7 @@ createListList_ base resultList resultListList =
             createListList_ nextBase xs { listList = resultListList.listList ++ [ ( x, base ) ], lastList = nextBase }
 
 
-view : Model -> Html Msg
+view : Model -> Browser.Document Msg
 view model =
     let
         { listList, lastList } =
@@ -392,23 +437,27 @@ view model =
             List.isEmpty model.resultList
     in
     -- レバーとか回すところ
-    div [ class "main-container" ]
-        [ div [ class "roulette-results" ] <|
-            controlView
-                ++ (if isStartedRoulette then
-                        listViewForCreate
+    { title = "Elm Shuffroulette"
+    , body =
+        [ div [ class "main-container" ]
+            [ div [ class "roulette-results" ] <|
+                controlView
+                    ++ (if isStartedRoulette then
+                            listViewForCreate
 
-                    else
-                        shuffledList ++ shuffleList
-                   )
-        , h2 [ class "roulette-result-text" ]
-            [ text <|
-                createSelectedText
-                    { selectedList = model.resultList
-                    , restList = lastList
-                    }
+                        else
+                            shuffledList ++ shuffleList
+                       )
+            , h2 [ class "roulette-result-text" ]
+                [ text <|
+                    createSelectedText
+                        { selectedList = model.resultList
+                        , restList = lastList
+                        }
+                ]
             ]
         ]
+    }
 
 
 type alias SelectedListArgs =
@@ -441,13 +490,15 @@ createSelectedText { selectedList, restList } =
                 ++ " ]"
 
 
-main : Program { currentTime : Int, listValue : JE.Value } Model Msg
+main : Program { currentTime : Int } Model Msg
 main =
-    Browser.element
+    Browser.application
         { init = init
         , view = view
         , update = update
         , subscriptions = subscriptions
+        , onUrlChange = UrlChanged
+        , onUrlRequest = LinkClicked
         }
 
 
