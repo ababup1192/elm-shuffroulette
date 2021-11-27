@@ -8,6 +8,7 @@ import Fuzz exposing (result)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Json.Decode as JD
 import Json.Encode as JE
 import Process
 import Random
@@ -363,6 +364,7 @@ view model =
                             , class "roulette-list-new-item-input"
                             , value model.inputItemName
                             , onInput InputItemName
+                            , onFinish AddItem NoOp
                             ]
                             []
 
@@ -458,6 +460,21 @@ view model =
             ]
         ]
     }
+
+
+onFinish : msg -> msg -> Attribute msg
+onFinish enterMessage noOp =
+    let
+        select key =
+            case key of
+                13 ->
+                    enterMessage
+
+                _ ->
+                    -- Not a 'finish' key, such as ENTER or ESCAPE
+                    noOp
+    in
+    on "keydown" (JD.map select keyCode)
 
 
 type alias SelectedListArgs =
